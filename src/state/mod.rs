@@ -573,7 +573,7 @@ impl StateInner {
             .param("HOSTLEN=39") // max size of an IPv6 address
             .param("INVEX")
             .param("MODES")
-            .param("PREFIX=(qaohv)~&@%+")
+            .param("PREFIX=(ohv)@%+")
             .param("SAFELIST")
             .param("TARGMAX=JOIN:,KICK:,LIST:,NAMES:,NOTICE:1,PART:,PRIVMSG:1,WHOIS:1")
             .fmt_param(format_args!("AWAYLEN={}", self.awaylen))
