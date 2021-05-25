@@ -11,16 +11,14 @@ IRCd, for short).  You will especially find:
 - an IRC server, ellidri, that aims to be simple to setup, feature complete and
   scalable.
 
-To discuss about ellidri and cie, join the IRC channel: [#ellidri on
-freenode][irc]!  There is also a test server running at [ellidri.org][org], if
-you want to try it out!
+To discuss about ellidri and cie, join the IRC channel: #ellidri on
+ellidri.org (port 6697 with TLS)!
 
 The rest of this document is about ellidri, the IRC server.  All other projects
 have their own `README.md`.
 
 [ircd]: https://en.wikipedia.org/wiki/IRCd
 [v3]: https://ircv3.net/
-[irc]: https://webchat.freenode.net/#ellidri
 [org]: https://ellidri.org/
 
 
