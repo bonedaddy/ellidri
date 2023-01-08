@@ -1,15 +1,14 @@
-use crate::{control, lines, State, tls};
+use crate::{control, lines, tls, State};
 use ellidri_tokens::Message;
 use std::net::SocketAddr;
 use std::str;
+use tokio::io::{AsyncBufReadExt, AsyncReadExt};
 use tokio::sync::mpsc;
 use tokio::{io, net, sync, time};
-use tokio::io::{AsyncBufReadExt, AsyncReadExt};
 
 #[cfg(feature = "tls")]
 const TLS_TIMEOUT_SECS: u64 = 30;
 const MAX_MESSAGE_LENGTH: u64 = 4096;
-
 
 /// Returns a future that listens, accepts and handles incoming connections.
 pub async fn listen(
@@ -72,12 +71,7 @@ fn handle_tcp(conn: net::TcpStream, peer_addr: SocketAddr, shared: State) {
 }
 
 #[cfg_attr(not(feature = "tls"), allow(unused_variables))]
-fn handle_tls(
-    conn: net::TcpStream,
-    peer_addr: SocketAddr,
-    shared: State,
-    acceptor: tls::Acceptor,
-) {
+fn handle_tls(conn: net::TcpStream, peer_addr: SocketAddr, shared: State, acceptor: tls::Acceptor) {
     #[cfg(feature = "tls")]
     tokio::spawn(async move {
         let tls_handshake_timeout = time::Duration::from_secs(TLS_TIMEOUT_SECS);
@@ -142,7 +136,10 @@ async fn handle(conn: impl io::AsyncRead + io::AsyncWrite, peer_addr: SocketAddr
         let mut buf = String::new();
         rate_limit!(125, 32, async {
             buf.clear();
-            let n = (&mut reader).take(MAX_MESSAGE_LENGTH).read_line(&mut buf).await?;
+            let n = (&mut reader)
+                .take(MAX_MESSAGE_LENGTH)
+                .read_line(&mut buf)
+                .await?;
             if n == 0 {
                 return Err(io::Error::new(
                     io::ErrorKind::UnexpectedEof,

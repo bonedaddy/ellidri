@@ -885,7 +885,7 @@ impl super::StateInner {
     // PASS
 
     pub fn cmd_pass(&mut self, ctx: CommandContext<'_>, password: &str) -> Result {
-        if self.password == password {
+        if crate::util::verify_password_hash(&self.password, password).is_ok() {
             self.clients[ctx.id].has_given_password = true;
         }
 

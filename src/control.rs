@@ -40,8 +40,9 @@
 //! not kept track of, thus ellidri might reload the same TLS identity for a binding (it is fine to
 //! let it do we are not reading thousands for TLS identities here).
 
-use crate::{Config, net, State, tls};
 use crate::config::{Binding, Tls};
+use crate::{net, tls, Config, State};
+use anyhow::Result;
 use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -75,22 +76,6 @@ struct LoadedBinding<F> {
     future: F,
 }
 
-/// Creates a tokio runtime with the given number of worker threads.
-fn create_runtime(workers: usize) -> rt::Runtime {
-    let mut builder = rt::Builder::new_multi_thread();
-    if workers != 0 {
-        builder.worker_threads(workers);
-    }
-    builder
-        .enable_io()
-        .enable_time()
-        .build()
-        .unwrap_or_else(|err| {
-            log::error!("Failed to start the tokio runtime: {}", err);
-            process::exit(1);
-        })
-}
-
 /// Creates the bindings tasks and spawns them on the given runtime.
 ///
 /// This function is what `Control` calls on startup to generate the bindings.  Because it exits
@@ -108,7 +93,10 @@ fn load_bindings(
 
     for Binding { address, tls } in bindings {
         let (handle, commands) = mpsc::channel(8);
-        if let Some(Tls { certificate, key, ..  }) = tls {
+        if let Some(Tls {
+            certificate, key, ..
+        }) = tls
+        {
             let acceptor = match store.acceptor(certificate, key) {
                 Ok(acceptor) => acceptor,
                 Err(_) => process::exit(1),
@@ -148,9 +136,9 @@ async fn do_rehash(
 ) {
     log::info!("Reloading configuration from {:?}", config_path);
     let shared_clone = shared.clone();
-    let reloaded = task::spawn_blocking(|| reload_config(config_path, shared_clone, stop)).await;
+    let reloaded = reload_config(config_path, shared_clone, stop).await;
     let (cfg, new_bindings) = match reloaded {
-        Ok(Some(reloaded)) => reloaded,
+        Some(reloaded) => reloaded,
         _ => return,
     };
 
@@ -204,12 +192,12 @@ async fn do_rehash(
 /// This function will put the contents of the MOTD file into `Config.motd_file`, so that the
 /// shared state can use the field as-is, since it must not use blocking operations such as reading
 /// a file.
-fn reload_config(
+async fn reload_config(
     config_path: String,
     shared: State,
     stop: mpsc::Sender<SocketAddr>,
 ) -> Option<(Config, Vec<LoadedBinding<impl Future<Output = ()>>>)> {
-    let mut cfg = match Config::from_file(&config_path) {
+    let mut cfg = match Config::from_file(&config_path).await {
         Ok(cfg) => cfg,
         Err(err) => {
             log::error!("Failed to read {:?}: {}", config_path, err);
@@ -244,7 +232,10 @@ fn reload_bindings(
 
     for Binding { address, tls } in bindings {
         let (handle, commands) = mpsc::channel(8);
-        if let Some(Tls { certificate, key, ..  }) = tls {
+        if let Some(Tls {
+            certificate, key, ..
+        }) = tls
+        {
             let acceptor = match store.acceptor(certificate, key) {
                 Ok(acceptor) => acceptor,
                 Err(_) => continue,
@@ -276,18 +267,18 @@ fn reload_bindings(
     res
 }
 
-pub fn load_config_and_run(config_path: String) {
-    let cfg = Config::from_file(&config_path).unwrap_or_else(|err| {
-        log::error!("Failed to read {:?}: {}", config_path, err);
-        process::exit(1);
-    });
-    let runtime = create_runtime(cfg.workers);
-    runtime.block_on(run(config_path, cfg));
+pub async fn load_config_and_run(config_path: String) -> Result<()> {
+    let cfg = Config::from_file(&config_path).await?;
+    run(config_path, cfg).await;
+    Ok(())
 }
 
 pub async fn run(config_path: String, cfg: Config) {
     let signal_fail = |err| {
-        log::error!("Cannot listen for signals to reload the configuration: {}", err);
+        log::error!(
+            "Cannot listen for signals to reload the configuration: {}",
+            err
+        );
         process::exit(1);
     };
 

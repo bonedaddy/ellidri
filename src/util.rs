@@ -1,5 +1,9 @@
+use anyhow::anyhow;
+use argon2::password_hash::SaltString;
+use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 use rand_chacha::ChaChaRng;
+use rand_core::OsRng;
 use std::cell::RefCell;
 use std::time;
 
@@ -154,10 +158,37 @@ pub fn time() -> u64 {
     }
 }
 
+pub fn hash_password(password: &str) -> anyhow::Result<String> {
+    use argon2::PasswordHasher;
+    let salt = SaltString::generate(&mut OsRng);
+    let argon = Argon2::default();
+    match argon.hash_password(password.as_bytes(), &salt) {
+        Ok(hash) => Ok(hash.to_string()),
+        Err(err) => Err(anyhow!("failed to hash password {:#?}", err)),
+    }
+}
+
+pub fn verify_password_hash(password_hash: &str, password: &str) -> anyhow::Result<()> {
+    let parsed_hash =
+        PasswordHash::new(password_hash).map_err(|e| anyhow!("failed to parse hash {:#?}", e))?;
+    if let Err(err) = Argon2::default().verify_password(password.as_bytes(), &parsed_hash) {
+        return Err(anyhow!("invalid password {:#?}", err));
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn test_password_verification() {
+        let hashed_password_one = hash_password("hello world").unwrap();
+        let hashed_password_two = hash_password("foo bar").unwrap();
 
+        assert!(verify_password_hash(&hashed_password_one, "hello world").is_ok());
+        assert!(verify_password_hash(&hashed_password_two, "foo bar").is_ok());
+        assert!(verify_password_hash(&hashed_password_two, "hello world").is_err());
+    }
     #[test]
     fn test_mask_match() {
         let cases = [

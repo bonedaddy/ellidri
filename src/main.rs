@@ -10,12 +10,15 @@
 )]
 #![recursion_limit = "1024"]
 
+use clap::{Arg, Command};
+use util::hash_password;
+
 use crate::channel::Channel;
 use crate::client::Client;
 use crate::config::Config;
 use crate::state::State;
+use anyhow::{anyhow, Context, Result};
 use std::{env, process};
-
 mod channel;
 mod client;
 mod config;
@@ -28,7 +31,8 @@ mod state;
 mod tls;
 mod util;
 
-pub fn main() {
+#[tokio::main(flavor = "multi_thread")]
+pub async fn main() -> Result<()> {
     if cfg!(debug_assertions) {
         env::set_var("RUST_BACKTRACE", "1");
     }
@@ -43,28 +47,54 @@ pub fn main() {
         })
         .init();
 
-    let config_path = parse_args();
-    control::load_config_and_run(config_path);
-}
+    let app = Command::new("Ellidri")
+        .about("irc server")
+        .subcommands(vec![
+            Command::new("gen-config")
+                .about("generate a new configuration file")
+                .arg(
+                    Arg::new("output-file")
+                        .long("output-file")
+                        .help("file to write config file to"),
+                ),
+            Command::new("start")
+                .about("start the ellidri irc server")
+                .arg(
+                    Arg::new("config")
+                        .long("config")
+                        .help("path to ellidri config file"),
+                ),
+            Command::new("hash-password")
+                .about("read user input, running it through argon2 hashing"),
+        ])
+        .get_matches();
 
-fn parse_args() -> String {
-    let mut args = env::args();
-
-    let program = args.next().unwrap();
-
-    let config_path = args.next().unwrap_or_else(|| {
-        eprintln!("Usage: {} CONFIG_FILE", program);
-        process::exit(1);
-    });
-
-    if config_path == "-h" || config_path == "--help" {
-        eprintln!("ellidri {}", env!("CARGO_PKG_VERSION"));
-        eprintln!("Usage: {} CONFIG_FILE", program);
-        process::exit(1);
-    } else if config_path == "-v" || config_path == "--version" {
-        eprintln!("ellidri {}", env!("CARGO_PKG_VERSION"));
-        process::exit(1);
+    match app.subcommand() {
+        Some(("gen-config", gen)) => {
+            Config::default()
+                .write_to_file(
+                    gen.get_one::<String>("output-file")
+                        .context("failed to get output-file")?,
+                )
+                .await?;
+        }
+        Some(("start", start)) => {
+            control::load_config_and_run(
+                start
+                    .get_one::<String>("config")
+                    .context("failed to get config")?
+                    .to_string(),
+            )
+            .await?;
+        }
+        Some(("hash-password", _)) => {
+            let pass = rpassword::prompt_password("input password: ")
+                .context("failed to read user input")?;
+            let hashed_password = hash_password(&pass).unwrap();
+            println!("hashed password: {}", hashed_password);
+            assert!(crate::util::verify_password_hash(&hashed_password, &pass).is_ok());
+        }
+        _ => return Err(anyhow!("invalid subcommand")),
     }
-
-    config_path
+    Ok(())
 }

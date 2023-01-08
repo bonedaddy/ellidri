@@ -17,3 +17,7 @@ target/
 *.svg
 *.data
 *.data.old
+
+ellidri
+
+conf.yaml
