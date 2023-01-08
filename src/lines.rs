@@ -15,7 +15,7 @@ where
     F: FnOnce(Arguments<'_>) -> T,
 {
     if let Some(reason) = reason {
-        f(format_args!("This senpai left a note: {}", reason))
+        f(format_args!("This senpai left a note: {reason}"))
     } else {
         f(format_args!("This senpai left"))
     }

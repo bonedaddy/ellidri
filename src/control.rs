@@ -47,9 +47,8 @@ use std::future::Future;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::{fs, process};
-use tokio::runtime as rt;
+
 use tokio::sync::{mpsc, Notify};
-use tokio::task;
 
 /// A command from `Control` to binding tasks.
 pub enum Command {

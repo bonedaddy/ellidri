@@ -32,13 +32,12 @@ pub fn assert_msg(
     command: Result<Command, &str>,
     params: &[&str],
 ) {
-    assert_eq!(msg.prefix, prefix, "prefix of {:?}", msg);
-    assert_eq!(msg.command, command, "command of {:?}", msg);
+    assert_eq!(msg.prefix, prefix, "prefix of {msg:?}");
+    assert_eq!(msg.command, command, "command of {msg:?}");
     assert_eq!(
         msg.num_params,
         params.len(),
-        "number of parameters of {:?}",
-        msg
+        "number of parameters of {msg:?}"
     );
     for (i, (actual, expected)) in msg.params.iter().zip(params.iter()).enumerate() {
         if expected.is_empty() {
@@ -46,6 +45,6 @@ pub fn assert_msg(
             // NAMREPLY params, since the order comes from `HashMap::iter`), so we skip them.
             continue;
         }
-        assert_eq!(actual, expected, "parameter #{} of {:?}", i, msg);
+        assert_eq!(actual, expected, "parameter #{i} of {msg:?}");
     }
 }

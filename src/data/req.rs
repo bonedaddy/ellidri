@@ -167,9 +167,7 @@ pub enum Request<'a> {
 
 impl<'a> Request<'a> {
     pub fn new(msg: &'a Message<'a>) -> Result<Self, Error<'a>> {
-        let command = msg
-            .command
-            .map_err(|unknown| Error::UnknownCommand(unknown))?;
+        let command = msg.command.map_err(Error::UnknownCommand)?;
 
         if !msg.has_enough_params() {
             return Err(Error::NeedMoreParams(command, msg.num_params));

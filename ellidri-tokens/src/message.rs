@@ -180,7 +180,7 @@ impl<'a> Tag<'a> {
 pub fn tags(s: &str) -> impl Iterator<Item = Tag<'_>> {
     s.split(';')
         .filter(|item| !item.is_empty() && !item.starts_with('=') && !item.starts_with("+="))
-        .map(|item| Tag::parse(item))
+        .map(Tag::parse)
 }
 
 /// An IRC message.

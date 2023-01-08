@@ -71,7 +71,7 @@ impl<'a> MessageBuffer<'a> {
     /// assert_eq!(&response.build(), "PRIVMSG   #space  42\r\n");
     /// ```
     pub fn fmt_param(self, param: impl fmt::Display) -> Self {
-        let _ = write!(self.buf, " {}", param);
+        let _ = write!(self.buf, " {param}");
         self
     }
 
@@ -105,7 +105,7 @@ impl<'a> MessageBuffer<'a> {
     }
 
     pub fn fmt_trailing_param(self, param: impl fmt::Display) {
-        let _ = write!(self.buf, " :{}", param);
+        let _ = write!(self.buf, " :{param}");
     }
 
     pub fn raw_trailing_param(&mut self) -> &mut String {
@@ -132,7 +132,7 @@ fn write_escaped(buf: &mut String, value: impl fmt::Display) {
         let mut s = s.borrow_mut();
 
         s.clear();
-        let _ = write!(s, "{}", value);
+        let _ = write!(s, "{value}");
 
         buf.reserve(s.len());
         for c in s.chars() {
@@ -415,7 +415,7 @@ impl ReplyBuffer {
                     .tagged_message("")
                     .tag("label", Some(&label))
                     .prefixed_command(&domain, "BATCH")
-                    .fmt_param(format_args!("+{}", new_batch))
+                    .fmt_param(format_args!("+{new_batch}"))
                     .param("labeled-response");
             })
         });
@@ -440,7 +440,7 @@ impl ReplyBuffer {
     pub fn batch_begin(&mut self, name: &str) {
         let new_batch = self.new_batch();
         self.prefixed_message("BATCH")
-            .fmt_param(format_args!("+{}", new_batch))
+            .fmt_param(format_args!("+{new_batch}"))
             .param(name);
     }
 
@@ -451,7 +451,7 @@ impl ReplyBuffer {
         };
         self.batch = if prev == 0 { None } else { Some(prev - 1) };
         self.prefixed_message("BATCH")
-            .fmt_param(format_args!("-{}", prev));
+            .fmt_param(format_args!("-{prev}"));
     }
 
     pub fn build(self) -> String {

@@ -226,7 +226,7 @@ impl StateInner {
         log::debug!("{}: Disconnected", id);
 
         if let Some(err) = err {
-            self.remove_client(id, format_args!("{}", err), format_args!("{}", err));
+            self.remove_client(id, format_args!("{err}"), format_args!("{err}"));
         } else {
             self.remove_client(id, lines::CLOSING_LINK, lines::CONNECTION_RESET);
         }
@@ -660,7 +660,7 @@ impl StateInner {
         }
         if 0 < unknown {
             rb.reply(rpl::LUSERUNKNOWN)
-                .fmt_param(&unknown)
+                .fmt_param(unknown)
                 .trailing_param(lines::LUSER_UNKNOWN);
         }
 
@@ -686,7 +686,7 @@ impl StateInner {
 
             for line in motd.lines() {
                 rb.reply(rpl::MOTD)
-                    .fmt_trailing_param(format_args!("- {}", line));
+                    .fmt_trailing_param(format_args!("- {line}"));
             }
 
             rb.reply(rpl::ENDOFMOTD).trailing_param(lines::END_OF_MOTD);

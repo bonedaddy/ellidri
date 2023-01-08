@@ -131,7 +131,7 @@ pub fn new_message_id() -> String {
     });
 
     let mut encoded = [0x0; 24 * 4 / 3];
-    base64::encode_config_slice(&bytes, base64::STANDARD_NO_PAD, &mut encoded);
+    base64::encode_config_slice(bytes, base64::STANDARD_NO_PAD, &mut encoded);
 
     std::str::from_utf8(&encoded).unwrap().to_owned()
 }
@@ -209,9 +209,7 @@ mod tests {
             assert_eq!(
                 match_mask(mask, s),
                 *is_match,
-                "match_mask({:?}, {:?})",
-                mask,
-                s
+                "match_mask({mask:?}, {s:?})"
             );
         }
     }

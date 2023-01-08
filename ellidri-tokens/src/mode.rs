@@ -36,11 +36,7 @@ impl Iterator for SimpleQuery<'_> {
 
     fn next(&mut self) -> Option<Self::Item> {
         loop {
-            let c = if let Some(c) = self.modes.next() {
-                c
-            } else {
-                return None;
-            };
+            let c = self.modes.next()?;
             match c {
                 '+' => {
                     self.value = true;

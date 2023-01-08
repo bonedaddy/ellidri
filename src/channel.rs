@@ -164,7 +164,7 @@ impl Channel {
     }
 
     pub fn list_entry(&self, msg: MessageBuffer<'_>) {
-        msg.fmt_param(&self.members.len()).trailing_param(
+        msg.fmt_param(self.members.len()).trailing_param(
             self.topic
                 .as_ref()
                 .map_or("", |topic| topic.content.as_ref()),
@@ -231,7 +231,7 @@ impl Channel {
                 out = out.fmt_param(user_limit);
             }
             if let Some(ref key) = self.key {
-                out.param(&key);
+                out.param(key);
             }
         }
     }

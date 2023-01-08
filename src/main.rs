@@ -18,7 +18,7 @@ use crate::client::Client;
 use crate::config::Config;
 use crate::state::State;
 use anyhow::{anyhow, Context, Result};
-use std::{env, process};
+use std::env;
 mod channel;
 mod client;
 mod config;
@@ -91,7 +91,7 @@ pub async fn main() -> Result<()> {
             let pass = rpassword::prompt_password("input password: ")
                 .context("failed to read user input")?;
             let hashed_password = hash_password(&pass).unwrap();
-            println!("hashed password: {}", hashed_password);
+            println!("hashed password: {hashed_password}");
             assert!(crate::util::verify_password_hash(&hashed_password, &pass).is_ok());
         }
         _ => return Err(anyhow!("invalid subcommand")),

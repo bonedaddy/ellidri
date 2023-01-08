@@ -265,13 +265,13 @@ impl super::StateInner {
                 let channel = self
                     .channels
                     .entry(UniCase::new(channel_name.get().to_owned()))
-                    .or_insert_with(|| Channel::new(&default_chan_mode));
+                    .or_insert_with(|| Channel::new(default_chan_mode));
                 channel.add_member(ctx.id);
 
                 ctx.rb.lr_batch_begin();
-                self.send_join(ctx.id, &mut ctx.rb, channel_name.get(), client);
-                self.send_topic(&mut ctx.rb, channel_name, false);
-                self.send_names(ctx.id, &mut ctx.rb, channel_name);
+                self.send_join(ctx.id, ctx.rb, channel_name.get(), client);
+                self.send_topic(ctx.rb, channel_name, false);
+                self.send_names(ctx.id, ctx.rb, channel_name);
                 joined = true;
             }
         }
@@ -326,7 +326,7 @@ impl super::StateInner {
         clients[kicked_id].send(msg);
     }
 
-    pub fn cmd_kick(&mut self, mut ctx: CommandContext<'_>, args: data::req::Kick<'_>) -> Result {
+    pub fn cmd_kick(&mut self, ctx: CommandContext<'_>, args: data::req::Kick<'_>) -> Result {
         let channel = match self.channels.get_mut(args.from.u()) {
             Some(channel) => channel,
             None => {
@@ -362,7 +362,7 @@ impl super::StateInner {
             if let Some(kicked_id) = kicked_id {
                 Self::send_kick(
                     ctx.id,
-                    &mut ctx.rb,
+                    ctx.rb,
                     &self.clients,
                     channel,
                     args.from.get(),
@@ -446,9 +446,9 @@ impl super::StateInner {
 
     // LUSERS
 
-    pub fn cmd_lusers(&self, mut ctx: CommandContext<'_>) -> Result {
+    pub fn cmd_lusers(&self, ctx: CommandContext<'_>) -> Result {
         ctx.rb.lr_batch_begin();
-        self.send_lusers(ctx.id, &mut ctx.rb);
+        self.send_lusers(ctx.id, ctx.rb);
         Ok(())
     }
 
@@ -470,7 +470,7 @@ impl super::StateInner {
 
     pub fn cmd_mode_channel_set(
         &mut self,
-        mut ctx: CommandContext<'_>,
+        ctx: CommandContext<'_>,
         args: data::req::ModeChannelSet<'_>,
     ) -> Result {
         let channel = match self.channels.get_mut(args.channel.u()) {
@@ -514,7 +514,7 @@ impl super::StateInner {
             match maybe_change {
                 Ok(mode::ChannelChange::GetBans) => {
                     reply_list(
-                        &mut ctx.rb,
+                        ctx.rb,
                         rpl::BANLIST,
                         rpl::ENDOFBANLIST,
                         lines::END_OF_BAN_LIST,
@@ -523,7 +523,7 @@ impl super::StateInner {
                 }
                 Ok(mode::ChannelChange::GetExceptions) => {
                     reply_list(
-                        &mut ctx.rb,
+                        ctx.rb,
                         rpl::EXCEPTLIST,
                         rpl::ENDOFEXCEPTLIST,
                         lines::END_OF_EXCEPT_LIST,
@@ -532,7 +532,7 @@ impl super::StateInner {
                 }
                 Ok(mode::ChannelChange::GetInvitations) => {
                     reply_list(
-                        &mut ctx.rb,
+                        ctx.rb,
                         rpl::INVITELIST,
                         rpl::ENDOFINVITELIST,
                         lines::END_OF_INVITE_LIST,
@@ -674,9 +674,9 @@ impl super::StateInner {
 
     // MOTD
 
-    pub fn cmd_motd(&self, mut ctx: CommandContext<'_>) -> Result {
+    pub fn cmd_motd(&self, ctx: CommandContext<'_>) -> Result {
         ctx.rb.lr_batch_begin();
-        self.send_motd(&mut ctx.rb);
+        self.send_motd(ctx.rb);
         Ok(())
     }
 
@@ -692,13 +692,13 @@ impl super::StateInner {
 
     pub fn cmd_names(
         &self,
-        mut ctx: CommandContext<'_>,
+        ctx: CommandContext<'_>,
         targets: data::List<'_, data::ChannelName<'_>>,
     ) -> Result {
         ctx.rb.lr_batch_begin();
 
         for target in targets.iter() {
-            self.send_names(ctx.id, &mut ctx.rb, target);
+            self.send_names(ctx.id, ctx.rb, target);
         }
 
         Ok(())
@@ -1141,7 +1141,7 @@ impl super::StateInner {
         }
     }
 
-    pub fn cmd_who_all(&self, mut ctx: CommandContext<'_>, filter: data::req::WhoFilter) -> Result {
+    pub fn cmd_who_all(&self, ctx: CommandContext<'_>, filter: data::req::WhoFilter) -> Result {
         let issuer = &self.clients[ctx.id];
         if !issuer.operator {
             ctx.rb
@@ -1154,7 +1154,7 @@ impl super::StateInner {
         ctx.rb.lr_batch_begin();
 
         for target_id in self.nicks.values() {
-            self.who_user(ctx.id, &mut ctx.rb, issuer, *target_id, filter);
+            self.who_user(ctx.id, ctx.rb, issuer, *target_id, filter);
         }
 
         ctx.rb
@@ -1167,7 +1167,7 @@ impl super::StateInner {
 
     pub fn cmd_who_channel(
         &self,
-        mut ctx: CommandContext<'_>,
+        ctx: CommandContext<'_>,
         args: data::req::WhoChannel<'_>,
     ) -> Result {
         // Little trick right here.  This isn't a loop, but `Option` implements `Iterator`, so
@@ -1194,7 +1194,7 @@ impl super::StateInner {
                     // operators, or the client cannot see the member.
                     continue;
                 }
-                self.who_line(&mut ctx.rb, issuer, target, args.mask.get(), *modes);
+                self.who_line(ctx.rb, issuer, target, args.mask.get(), *modes);
             }
         }
 
@@ -1206,11 +1206,7 @@ impl super::StateInner {
         Ok(())
     }
 
-    pub fn cmd_who_mask(
-        &self,
-        mut ctx: CommandContext<'_>,
-        args: data::req::WhoMask<'_>,
-    ) -> Result {
+    pub fn cmd_who_mask(&self, ctx: CommandContext<'_>, args: data::req::WhoMask<'_>) -> Result {
         let issuer = &self.clients[ctx.id];
         if !issuer.operator {
             ctx.rb
@@ -1233,14 +1229,14 @@ impl super::StateInner {
                         .map(move |(member, modes)| (name, &self.clients[*member], modes))
                 })
                 .for_each(|(name, target, modes)| {
-                    self.who_line(&mut ctx.rb, issuer, target, name.get(), *modes)
+                    self.who_line(ctx.rb, issuer, target, name.get(), *modes)
                 });
         } else {
             for (nick, id) in &self.nicks {
                 if !args.mask.is_match(nick.get()) {
                     continue;
                 }
-                self.who_user(ctx.id, &mut ctx.rb, issuer, *id, args.filter);
+                self.who_user(ctx.id, ctx.rb, issuer, *id, args.filter);
             }
         }
 
@@ -1252,16 +1248,12 @@ impl super::StateInner {
         Ok(())
     }
 
-    pub fn cmd_who_user(
-        &self,
-        mut ctx: CommandContext<'_>,
-        args: data::req::WhoUser<'_>,
-    ) -> Result {
+    pub fn cmd_who_user(&self, ctx: CommandContext<'_>, args: data::req::WhoUser<'_>) -> Result {
         if let Some(target_id) = self.nicks.get(args.mask.u()) {
             ctx.rb.lr_batch_begin();
             self.who_user(
                 ctx.id,
-                &mut ctx.rb,
+                ctx.rb,
                 &self.clients[ctx.id],
                 *target_id,
                 args.filter,
@@ -1297,8 +1289,8 @@ impl super::StateInner {
         ctx.rb
             .reply(rpl::WHOISIDLE)
             .param(target_client.nick())
-            .fmt_param(&target_client.idle_time())
-            .fmt_param(&target_client.signon_time())
+            .fmt_param(target_client.idle_time())
+            .fmt_param(target_client.signon_time())
             .trailing_param(lines::WHOIS_IDLE);
 
         if let Some(away_msg) = target_client.away_message() {
@@ -1402,7 +1394,7 @@ impl super::StateInner {
         args: data::req::MessageChannel<'_>,
     ) -> Result {
         let channel = if args.feedback {
-            find_channel(ctx.id, &mut ctx.rb, &self.channels, args.to)?
+            find_channel(ctx.id, ctx.rb, &self.channels, args.to)?
         } else {
             find_channel_quiet(ctx.id, &self.channels, args.to)?
         };
@@ -1454,7 +1446,7 @@ impl super::StateInner {
         mut ctx: CommandContext<'_>,
         args: data::req::MessageUser<'_>,
     ) -> Result {
-        let (_, target) = find_nick(ctx.id, &mut ctx.rb, &self.clients, &self.nicks, args.to)?;
+        let (_, target) = find_nick(ctx.id, ctx.rb, &self.clients, &self.nicks, args.to)?;
 
         if !target.cap_enabled.is_capable_of(args.command) {
             return Err(());
