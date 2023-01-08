@@ -50,7 +50,7 @@ impl fmt::Display for Error {
 }
 
 /// TLS-related and needed information for TLS bindings.
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Tls {
     pub certificate: path::PathBuf,
     pub key: path::PathBuf,
@@ -63,7 +63,7 @@ pub struct Binding {
     pub tls: Option<Tls>,
 }
 /// OPER credentials
-#[derive(Clone, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Oper {
     pub name: String,
     pub password: String,
